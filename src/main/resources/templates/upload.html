@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.bootcss.com/jquery/1.7.2/jquery.min.js"></script>
+    <title>树洞-上传测试</title>
+</head>
+<body>
+<input type="file" id="file">
+<button id="sub">上传</button>
+<input type="text" id="url">
+<button id="copy">复制</button>
+<img src="" alt="" id="img">
+</body>
+<script>
+    $("#sub").on("click", function () {
+        $file = $("#file")
+        var formData = new FormData();
+        formData.append('file', $('#file')[0].files[0]); // 固定格式
+        if (!$file.val()) {
+            // return;
+        }
+        $.ajax({
+            url: './uploadfile',
+            type: "POST",
+            cache: false,
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (data) {
+                $file.val(null)
+                var url = data
+                $("#url").val(url)
+                $('#img').attr("src", url);
+            },
+            fail: function (data) {
+                console.log(data)
+            }
+        });
+    })
+    $("#copy").on("click", function () {
+        $("#url").select();
+        document.execCommand("Copy");
+    })
+
+</script>
+
+</html>

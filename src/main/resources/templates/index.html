@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>树洞</title>
+    <script src="https://cdn.bootcss.com/jquery/1.7.2/jquery.min.js"></script>
+    <script th:src="@{/js/screenshots.js}" src="./js/screenshots.js"></script>
+    <script th:src="@{/js/dataURLtoFile.js}" src="./js/dataURLtoFile.js"></script>
+    <script th:src="@{/js/impAmp.js}" src="./js/impAmp.js"></script>
+    <link rel="stylesheet" th:href="@{/css/global.css}" href="./css/global.css">
+    <link rel="stylesheet" th:href="@{/css/index.css}" href="./css/index.css">
+</head>
+
+<body>
+<div class="main">
+    <div class="user">
+        <div class="userimg">
+            <!--展示头像-->
+            <img id="useravatar" style="width: 100%;" th:if="${session.user}"
+                 th:src="${session.user.avatar}?${session.user.avatar}:@{/img/bussiness-man.png}" alt="2">
+            <img style="width: 100%;" th:unless="${session.user}"
+                 th:src="@{/img/bussiness-man.png}" alt="1">
+        </div>
+        <!--用于修改昵称-->
+        <form th:action="@{/updatenickname}" method="post" id="updateNickname">
+            <p th:if="${session.user}"><input type="text" name="nickname" spellcheck="false"
+                                              th:value="${session.user.nickname}"></p>
+        </form>
+        <p th:if="${session.user}" onclick="selectImg()">上传头像</p>
+        <p><a th:href="@{/login}" th:text="${session.user}?退出登录:登录">退出登录</a></p>
+    </div>
+    <div class="post">
+        <textarea id="postcontent" placeholder="Deliver to the hole tree..."></textarea>
+        <div onclick="imgAdd()" class="img-add"><img style="width: 100%;" src="./img/pic.png" alt=""></div>
+        <div id="img-container" class="img-container">
+        </div>
+        <div onclick="leavePost()" class="post-btn"><img style="width: 100%;" src="./img/seleted.png" alt=""></div>
+    </div>
+    <div class="line"></div>
+    <div class="get" id="get">
+        <p class="page_text"><span>当前第</span><span class="page_msg" th:text="${page.number+1}"></span><span>页 共</span><span class="page_msg" th:text="${page.totalPages}"></span><span>页 共</span><span class="page_msg" th:text="${page.totalElements}"></span><span>条留言</span></p>
+        <input type="hidden" name="page">
+        <div class="get-item" th:each="leave,iterStat:${page.content}">
+            <div class="avatar"><img style="width: 100%;" th:src="${leave.user.avatar}?${leave.user.avatar}:@{/img/bussiness-man.png}" alt=""></div>
+            <div class="nickname" th:text="${leave.user.nickname}">nickname</div>
+            <div class="createtime" th:text="${#dates.format(leave.createTime,'yyyy-MM-dd HH:mm')}"></div>
+            <div th:if="${session.user}">
+                <div class="del-btn" th:if="${leave.user.id==session.user.id}"
+                     th:onclick="|javassist:leaveDel(${leave.id})|"><img
+                        th:src="@{/img/del.png}"
+                        src="./img/del.png"
+                        alt="删除"></div>
+            </div>
+            <div class="content"><span th:text="${leave.content}"></span>
+                <div class="img-list">
+                    <img th:each="src,iter:${imgMap[iterStat.index]}"
+                         th:src="${src}">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="page-btn-left" onclick="pageJump(this)" th:attr="data-page=${page.number}-1" th:unless="${page.first}">＜
+    </div>
+    <div class="page-btn-right" onclick="pageJump(this)" th:attr="data-page=${page.number}+1" th:unless="${page.last}">＞
+    </div>
+</div>
+<script>
+    //ajax处理重定向
+    $.ajaxSetup({
+        complete: function (XMLHttpRequest, textStatus) {
+            if (XMLHttpRequest.status == 302) {
+                window.location.href = "./login"
+            }
+        }
+    });
+    //存放post的数据
+    var postData = {
+        content: '',
+        imglist: new Array()
+    }
+    //跳页
+    var pageJump = function (obj) {
+        $("[name='page']").val($(obj).data("page"));
+        loaddata();
+    }
+    //重新请求
+    var loaddata = function () {
+        window.location.href = "./index?page=" + $("[name='page']").val();
+    }
+    //添加图片
+    var imgAdd = function () {
+        //截图方法
+        screenshots.uploadImg("截取图片",
+            "#fff",
+            0,
+            20,
+            "#409EFF",
+            function () {
+                //封装图片
+                var src = screenshots.getNewImg().cloneNode(true).src;
+                var formData = new FormData();
+                formData.append(
+                    "file",
+                    dataURLtoFile(src, "articleCover.jpg")
+                );
+                //上传图片
+                $.ajax({
+                    url: './uploadfile',
+                    type: "POST",
+                    cache: false,
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    //返回图片路径
+                    success: function (url) {
+                        postData.imglist.push(url);
+                        imgShow(url)
+                    },
+                    fail: function (data) {
+                        console.log(data)
+                    }
+                });
+            })
+    }
+    //图片回显
+    var imgShow = function (url) {
+        $("#img-container").append("<div onclick='imgDel(this)' style='background-image:url(" + url + ");'></div>\n")
+    }
+
+    //图片删除
+    var imgDel = function (obj) {
+        var url = obj.style.backgroundImage.slice(5, -2);
+        var index = postData.imglist.indexOf(url);
+        postData.imglist.splice(index, 1);
+        obj.remove();
+    }
+
+    //留言删除
+    var leaveDel = function (id) {
+        $.ajax({
+            type: "POST",
+            url: "./delleave",
+            data: {id: id},
+            success: function (res) {
+                if (res == 1) {
+                    alert("删除成功")
+                    window.location.reload();
+                }
+            }
+        })
+    }
+    //留言发表
+    var leavePost = function () {
+        postData.content = $("#postcontent").val()
+        postData.imglist = postData.imglist.join(",")
+        if (postData.content + postData.imglist == "") {
+            alert("请写点东西吧..")
+            return
+        }
+        console.log(postData)
+        $.ajax({
+            url: "./leave",
+            type: "POST",
+            data: postData,
+            success: function (res) {
+                if (res == 1) {
+                    alert("感谢留言!");
+                    window.location.href = "./index"
+                }
+            }
+        })
+    }
+
+    //修改昵称
+    var updateNicknameInput = document.getElementById("updateNickname").getElementsByTagName("input")[0];
+    if (updateNicknameInput) {
+        updateNicknameInput.onchange = function (ev) {
+            document.getElementById("updateNickname").submit();
+        };
+    }
+
+    //上传头像
+    var selectImg = function () {
+        //截图方法
+        screenshots.uploadImg("截取头像",
+            "#fff",
+            1,
+            20,
+            "#409EFF",
+            function () {
+                //封装图片
+                var src = screenshots.getNewImg().cloneNode(true).src;
+                var formData = new FormData();
+                formData.append(
+                    "file",
+                    dataURLtoFile(src, "articleCover.jpg")
+                );
+                //上传图片
+                $.ajax({
+                    url: './uploadfile',
+                    type: "POST",
+                    cache: false,
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    //返回图片路径
+                    success: function (data) {
+                        //将图片路径修改为头像路径
+                        updateAvatar(data)
+                    },
+                    fail: function (data) {
+                        console.log(data)
+                    }
+                });
+            })
+    }
+    //点击放大
+    imgAmp("get")
+    //修改头像
+    var updateAvatar = function (avatar) {
+        //本地修改
+        $('#useravatar').attr("src", avatar);
+        //数据库修改
+        $.ajax({
+            url: './updateAvatar',
+            type: "POST",
+            data: {avatar: avatar},
+            success: function () {
+                alert("修改成功")
+            }
+        })
+    }
+</script>
+</body>
+
+</html>

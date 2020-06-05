@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>树洞-登录</title>
+    <link rel="stylesheet" th:href="@{/css/global.css}" href="./css/global.css">
+    <link rel="stylesheet" th:href="@{/css/login.css}" href="./css/login.css">
+</head>
+
+<body>
+<div class="container">
+    <p class="welcome" th:text="#{login.welcome}">欢迎使用树洞</p>
+    <form th:action="@{/login}" method="post">
+        <p><label for="username" th:text="#{login.username}">账号:</label>
+            <input type="text" id="username" name="username"></p>
+        <p><label for="password" th:text="#{login.password}">密码:</label>
+            <input type="password" id="password" name="password"></p>
+        <p><input class="btn" type="submit" th:value="#{login.login}" value="登录">
+            <a th:href="@{/register}"><input class="btn" type="button" th:value="#{login.register}" value="注册"></a></p>
+    </form>
+    <p><a th:href="@{/login(l='zh_CN')}">中文</a> <a th:href="@{/login(l='en_US')}">English</a></p>
+</div>
+<p class="err-msg" th:unless="${#strings.isEmpty(message)}" th:text="${message}">用户名和密码错误</p>
+
+</body>
+
+</html>
